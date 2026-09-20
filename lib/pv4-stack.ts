@@ -3,6 +3,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Construct } from 'constructs';
 import { IngestAuthorizerConstruct } from './constructs/ingest-authorizer';
@@ -10,6 +11,7 @@ import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpMethod } from 'aws-cdk-lib/aws-events';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
+import { ENV_QUEUE_URL, ENV_UPDATES_CHECK_TABLE } from './consts';
 
 export class Pv4Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -43,7 +45,7 @@ export class Pv4Stack extends cdk.Stack {
     });
 
     queue.grantSendMessages(ingestFunction);
-    ingestFunction.addEnvironment('QUEUE_URL', queue.queueUrl);
+    ingestFunction.addEnvironment(ENV_QUEUE_URL, queue.queueUrl);
 
     const queueConsumer = new NodejsFunction(this, 'SQSConsumer', {
       runtime: lambda.Runtime.NODEJS_24_X,
@@ -53,5 +55,16 @@ export class Pv4Stack extends cdk.Stack {
     });
 
     queueConsumer.addEventSource(new lambdaEventSources.SqsEventSource(queue, { batchSize: 10 }));
+
+    const table = new dynamodb.Table(this, id, {
+      tableName: 'updates-idempotency',
+      partitionKey: { name: 'idempotencyKey', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 10,
+      writeCapacity: 10,
+    });
+
+    queueConsumer.addEnvironment(ENV_UPDATES_CHECK_TABLE, table.tableName);
+    table.grantReadWriteData(queueConsumer);
   }
 }

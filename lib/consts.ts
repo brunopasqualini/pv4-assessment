@@ -1,0 +1,3 @@
+export const ENV_UPDATES_CHECK_TABLE = 'UPDATES_CHECK_TABLE';
+export const ENV_QUEUE_URL = 'QUEUE_URL';
+export const ENV_INGEST_API_KEY = 'API_KEY';

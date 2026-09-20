@@ -8,7 +8,7 @@ import {
 } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as path from 'path';
 import * as logs from 'aws-cdk-lib/aws-logs';
-
+import { ENV_INGEST_API_KEY } from '../consts';
 export class IngestAuthorizerConstruct extends Construct {
   public readonly authorizer: HttpLambdaAuthorizer;
 
@@ -18,9 +18,9 @@ export class IngestAuthorizerConstruct extends Construct {
     const authFunction = new NodejsFunction(this, id, {
       runtime: lambda.Runtime.NODEJS_24_X,
       entry: path.join(__dirname, '../lambda/ingest-authorizer.ts'),
-      handler: 'handler',
-      environment: { API_KEY: props.apiKey },
       logRetention: logs.RetentionDays.ONE_WEEK,
+      environment: { [ENV_INGEST_API_KEY]: props.apiKey },
+      handler: 'handler',
     });
 
     this.authorizer = new HttpLambdaAuthorizer(id, authFunction, {
