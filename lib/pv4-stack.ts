@@ -11,7 +11,7 @@ import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpMethod } from 'aws-cdk-lib/aws-events';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { ENV_QUEUE_URL, ENV_UPDATES_CHECK_TABLE } from './consts';
+import { ENV_EVENT_RESULTS_TABLE, ENV_QUEUE_URL, ENV_IDEMPOTENCY_TABLE } from './consts';
 
 export class Pv4Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -56,7 +56,7 @@ export class Pv4Stack extends cdk.Stack {
 
     queueConsumer.addEventSource(new lambdaEventSources.SqsEventSource(queue, { batchSize: 10 }));
 
-    const table = new dynamodb.Table(this, id, {
+    const idempotencyTable = new dynamodb.Table(this, 'UpdatesIdempotency', {
       tableName: 'updates-idempotency',
       partitionKey: { name: 'idempotencyKey', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PROVISIONED,
@@ -64,7 +64,19 @@ export class Pv4Stack extends cdk.Stack {
       writeCapacity: 10,
     });
 
-    queueConsumer.addEnvironment(ENV_UPDATES_CHECK_TABLE, table.tableName);
-    table.grantReadWriteData(queueConsumer);
+    queueConsumer.addEnvironment(ENV_IDEMPOTENCY_TABLE, idempotencyTable.tableName);
+    idempotencyTable.grantReadWriteData(queueConsumer);
+
+    const eventResultTable = new dynamodb.Table(this, 'EventResultsTable', {
+      tableName: 'event-results',
+      partitionKey: { name: 'eventId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'bib', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PROVISIONED,
+      readCapacity: 10,
+      writeCapacity: 10,
+    });
+
+    queueConsumer.addEnvironment(ENV_EVENT_RESULTS_TABLE, eventResultTable.tableName);
+    eventResultTable.grantReadWriteData(queueConsumer);
   }
 }
