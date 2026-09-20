@@ -2,6 +2,8 @@ import * as cdk from 'aws-cdk-lib/core';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as path from 'path';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Construct } from 'constructs';
 import { IngestAuthorizerConstruct } from './constructs/ingest-authorizer';
 import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
@@ -33,5 +35,23 @@ export class Pv4Stack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'IngestApiUrl', { value: httpApi.url ?? 'UNKOWN' });
+
+    const queue = new sqs.Queue(this, 'UpdatesSQS', {
+      queueName: 'updates-sqs',
+      visibilityTimeout: cdk.Duration.seconds(30),
+      retentionPeriod: cdk.Duration.days(1),
+    });
+
+    queue.grantSendMessages(ingestFunction);
+    ingestFunction.addEnvironment('QUEUE_URL', queue.queueUrl);
+
+    const queueConsumer = new NodejsFunction(this, 'SQSConsumer', {
+      runtime: lambda.Runtime.NODEJS_24_X,
+      entry: path.join(__dirname, '/lambda/sqs-consumer.ts'),
+      handler: 'handler',
+      logRetention: logs.RetentionDays.ONE_WEEK,
+    });
+
+    queueConsumer.addEventSource(new lambdaEventSources.SqsEventSource(queue, { batchSize: 10 }));
   }
 }

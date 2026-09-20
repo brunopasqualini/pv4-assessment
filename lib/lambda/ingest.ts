@@ -1,21 +1,9 @@
 import { Logger } from '@aws-lambda-powertools/logger';
+import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 
 const logger = new Logger();
-
-import { type } from 'arktype';
-
-export const raceResult = type({
-  eventId: 'string.trim |> string > 0',
-  bib: 'string.trim |> string > 0',
-  lane: 'number.integer',
-  revision: 'number.integer >= 1',
-  status: "'PROVISIONAL' | 'CONFIRMED' | 'OFFICIAL'",
-  timeMs: 'number.integer > 0',
-  recordedAt: 'string',
-});
-
-export type RaceResult = typeof raceResult.infer;
+const sqs = new SQSClient({});
 
 export const handler = async (
   event: APIGatewayProxyEventV2,
@@ -25,11 +13,19 @@ export const handler = async (
   logger.addContext(context);
   logger.info('Payload received', { body: event.body });
 
-  const result = raceResult(JSON.parse(event.body ?? '[]'));
+  try {
+    const message = JSON.parse(event.body ?? '[]');
 
-  if (result instanceof type.errors) {
-    return { statusCode: 500, body: JSON.stringify({ message: result.summary }) };
+    if (typeof message !== 'object' || message === null || Array.isArray(message)) {
+      return { statusCode: 400, body: JSON.stringify({ message: 'Invalid' }) };
+    }
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ message: 'Invalid' }) };
   }
+
+  await sqs.send(
+    new SendMessageCommand({ QueueUrl: process.env.QUEUE_URL, MessageBody: event.body })
+  );
 
   return { statusCode: 200, body: JSON.stringify({ message: 'Ok' }) };
 };
