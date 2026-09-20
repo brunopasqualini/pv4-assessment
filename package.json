@@ -24,6 +24,7 @@
   "dependencies": {
     "@aws-lambda-powertools/logger": "^2.35.0",
     "@types/aws-lambda": "^8.10.163",
+    "arktype": "^2.2.3",
     "aws-cdk-lib": "^2.268.0",
     "constructs": "^10.5.0"
   }
