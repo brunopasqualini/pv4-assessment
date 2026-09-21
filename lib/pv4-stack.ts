@@ -17,6 +17,7 @@ import {
   ENV_IDEMPOTENCY_TABLE,
   ENV_SYSTEM_STATS_TABLE,
 } from './utils/consts';
+import { GraphqlApiConstruct } from './constructs/graphql-api';
 
 export class Pv4Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -84,7 +85,7 @@ export class Pv4Stack extends cdk.Stack {
     queueConsumer.addEnvironment(ENV_EVENT_RESULTS_TABLE, eventResultTable.tableName);
     eventResultTable.grantReadWriteData(queueConsumer);
 
-    const eventStatusTable = new dynamodb.Table(this, 'SystemStatsTable', {
+    const systemStatsTable = new dynamodb.Table(this, 'SystemStatsTable', {
       tableName: 'system-stats',
       partitionKey: { name: 'statType', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PROVISIONED,
@@ -92,7 +93,9 @@ export class Pv4Stack extends cdk.Stack {
       writeCapacity: 10,
     });
 
-    queueConsumer.addEnvironment(ENV_SYSTEM_STATS_TABLE, eventStatusTable.tableName);
-    eventStatusTable.grantReadWriteData(queueConsumer);
+    queueConsumer.addEnvironment(ENV_SYSTEM_STATS_TABLE, systemStatsTable.tableName);
+    systemStatsTable.grantReadWriteData(queueConsumer);
+
+    new GraphqlApiConstruct(this, 'GraphqlApi', { eventResultTable, systemStatsTable });
   }
 }
