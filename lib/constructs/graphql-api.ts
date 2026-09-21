@@ -19,7 +19,7 @@ export class GraphqlApiConstruct extends Construct {
   constructor(scope: Construct, id: string, { eventResultTable, systemStatsTable }: Props) {
     super(scope, id);
 
-    this.api = new appsync.GraphqlApi(this, 'GraphQLApi', {
+    this.api = new appsync.GraphqlApi(this, 'Api', {
       name: 'pv4-results-api',
       definition: appsync.Definition.fromFile(path.join(__dirname, '../graphql/schema.graphql')),
       authorizationConfig: {

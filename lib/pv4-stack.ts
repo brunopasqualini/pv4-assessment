@@ -18,6 +18,7 @@ import {
   ENV_SYSTEM_STATS_TABLE,
 } from './utils/consts';
 import { GraphqlApiConstruct } from './constructs/graphql-api';
+import { DashboardSite } from './constructs/dashboard-site';
 
 export class Pv4Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -36,7 +37,7 @@ export class Pv4Stack extends cdk.Stack {
 
     const httpApi = new HttpApi(this, 'IngestApi');
     httpApi.addRoutes({
-      path: '/ingest',
+      path: '/timing',
       methods: [HttpMethod.POST],
       integration: new HttpLambdaIntegration('IngestIntegration', ingestFunction),
       authorizer: auth.authorizer,
@@ -68,6 +69,7 @@ export class Pv4Stack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PROVISIONED,
       readCapacity: 10,
       writeCapacity: 10,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     queueConsumer.addEnvironment(ENV_IDEMPOTENCY_TABLE, idempotencyTable.tableName);
@@ -80,6 +82,7 @@ export class Pv4Stack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PROVISIONED,
       readCapacity: 10,
       writeCapacity: 10,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     queueConsumer.addEnvironment(ENV_EVENT_RESULTS_TABLE, eventResultTable.tableName);
@@ -91,11 +94,17 @@ export class Pv4Stack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PROVISIONED,
       readCapacity: 10,
       writeCapacity: 10,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     queueConsumer.addEnvironment(ENV_SYSTEM_STATS_TABLE, systemStatsTable.tableName);
     systemStatsTable.grantReadWriteData(queueConsumer);
 
-    new GraphqlApiConstruct(this, 'GraphqlApi', { eventResultTable, systemStatsTable });
+    const resultsGraphqlApi = new GraphqlApiConstruct(this, 'GraphqlApi', {
+      eventResultTable,
+      systemStatsTable,
+    });
+
+    new DashboardSite(this, 'DashboardSite', resultsGraphqlApi.api);
   }
 }

@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Race Results</title>
+    <style>
+      :root {
+        --bg: #14171a;
+        --panel: #1c2126;
+        --panel-line: #2a3037;
+        --text: #e8e6e1;
+        --muted: #8b9198;
+        --amber: #f2a93b;
+        --blue: #5b9bd5;
+        --green: #4fd197;
+        --red: #e2695b;
+        --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Consolas, monospace;
+        --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        min-height: 100vh;
+      }
+
+      .wrap {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 32px 20px 80px;
+      }
+
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px 24px;
+        margin-bottom: 28px;
+      }
+
+      h1 {
+        font-size: 1.35rem;
+        font-weight: 650;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+
+      .rejected-badge {
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+      .rejected-badge b {
+        color: var(--red);
+        font-weight: 600;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+
+      select,
+      input[type='text'],
+      button {
+        font-family: var(--sans);
+        font-size: 0.9rem;
+        color: var(--text);
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        border-radius: 6px;
+        padding: 9px 12px;
+      }
+
+      select {
+        min-width: 220px;
+        cursor: pointer;
+      }
+      input[type='text'] {
+        width: 170px;
+      }
+      input[type='text']:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--amber);
+      }
+
+      .manual-form {
+        display: inline-flex;
+        gap: 8px;
+        margin: 0;
+      }
+
+      button {
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      button:hover:not(:disabled) {
+        border-color: var(--amber);
+        color: var(--amber);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+
+      .icon-btn {
+        padding: 9px 10px;
+        line-height: 1;
+      }
+
+      .live-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-left: auto;
+      }
+
+      .switch {
+        position: relative;
+        width: 34px;
+        height: 19px;
+        border-radius: 20px;
+        background: var(--panel-line);
+        cursor: pointer;
+        transition: background 0.15s ease;
+        border: none;
+        padding: 0;
+      }
+      .switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: var(--text);
+        transition: transform 0.15s ease;
+      }
+      .switch.on {
+        background: var(--amber);
+      }
+      .switch.on::after {
+        transform: translateX(15px);
+      }
+
+      .updated-at {
+        font-size: 0.78rem;
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+
+      .banner {
+        padding: 12px 14px;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        margin-bottom: 20px;
+        line-height: 1.5;
+      }
+      .banner.error {
+        background: rgba(226, 105, 91, 0.12);
+        border: 1px solid rgba(226, 105, 91, 0.35);
+        color: #f0b1a8;
+      }
+      .banner.info {
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        color: var(--muted);
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .stat-tile {
+        background: var(--panel);
+        border: 1px solid var(--panel-line);
+        border-radius: 8px;
+        padding: 14px 16px;
+      }
+      .stat-tile .value {
+        font-family: var(--mono);
+        font-size: 1.6rem;
+        font-weight: 600;
+      }
+      .stat-tile .label {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .stat-tile.tracked .value {
+        color: var(--blue);
+      }
+      .stat-tile.accepted .value {
+        color: var(--green);
+      }
+      .stat-tile.ignored .value {
+        color: var(--amber);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      thead th {
+        text-align: left;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--muted);
+        padding: 0 12px 8px;
+        border-bottom: 1px solid var(--panel-line);
+      }
+      thead th.num,
+      tbody td.num {
+        text-align: right;
+      }
+      tbody td {
+        padding: 12px;
+        border-bottom: 1px solid var(--panel-line);
+        font-size: 0.92rem;
+      }
+      tbody tr:last-child td {
+        border-bottom: none;
+      }
+      tbody td.bib,
+      tbody td.lane,
+      tbody td.time,
+      tbody td.rev {
+        font-family: var(--mono);
+      }
+      tbody td.time {
+        font-weight: 600;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 600;
+      }
+      .pill.PROVISIONAL {
+        background: rgba(242, 169, 59, 0.15);
+        color: var(--amber);
+      }
+      .pill.CONFIRMED {
+        background: rgba(91, 155, 213, 0.15);
+        color: var(--blue);
+      }
+      .pill.OFFICIAL {
+        background: rgba(79, 209, 151, 0.15);
+        color: var(--green);
+      }
+
+      .empty {
+        text-align: center;
+        padding: 48px 20px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 560px) {
+        .stats-row {
+          grid-template-columns: 1fr;
+        }
+        .live-toggle {
+          margin-left: 0;
+          width: 100%;
+          justify-content: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Race Results</h1>
+        <div class="rejected-badge">Rejected pipeline-wide: <b id="rejectedCount">–</b></div>
+      </header>
+
+      <div id="configBanner" class="banner error" style="display: none"></div>
+
+      <div class="controls">
+        <select id="eventSelect" disabled>
+          <option>Loading events…</option>
+        </select>
+        <button id="reloadEventsBtn" class="icon-btn" title="Reload event list">↻ Events</button>
+        <form id="manualForm" class="manual-form">
+          <input id="manualEventId" type="text" placeholder="or type an event ID…" />
+          <button type="submit">Go</button>
+        </form>
+        <button id="refreshBtn" disabled>Refresh results</button>
+        <span class="live-toggle">
+          Live
+          <button id="liveSwitch" class="switch" role="switch" aria-checked="false"></button>
+        </span>
+      </div>
+
+      <div id="statusBanner"></div>
+
+      <div id="statsRow" class="stats-row" style="display: none">
+        <div class="stat-tile tracked">
+          <div class="value" id="statTracked">–</div>
+          <div class="label">Athletes tracked</div>
+        </div>
+        <div class="stat-tile accepted">
+          <div class="value" id="statAccepted">–</div>
+          <div class="label">Updates accepted</div>
+        </div>
+        <div class="stat-tile ignored">
+          <div class="value" id="statIgnored">–</div>
+          <div class="label">Updates ignored</div>
+        </div>
+      </div>
+
+      <div id="resultsContainer"></div>
+
+      <div style="margin-top: 16px" class="updated-at" id="updatedAt"></div>
+    </div>
+
+    <script>
+      // ---- Configuration -------------------------------------------------
+      // apiUrl/apiKey are not hardcoded here — they're written to config.json
+      // next to this file at deploy time by ResultsDashboardSite, from the
+      // live AppSync stack outputs.
+      let APPSYNC_URL = null;
+      let API_KEY = null;
+      const LIVE_POLL_INTERVAL_MS = 5000;
+      // ---------------------------------------------------------------------
+
+      const el = (id) => document.getElementById(id);
+      const eventSelect = el('eventSelect');
+      const reloadEventsBtn = el('reloadEventsBtn');
+      const manualForm = el('manualForm');
+      const manualEventId = el('manualEventId');
+      const refreshBtn = el('refreshBtn');
+      const liveSwitch = el('liveSwitch');
+      const statusBanner = el('statusBanner');
+      const configBanner = el('configBanner');
+      const statsRow = el('statsRow');
+      const resultsContainer = el('resultsContainer');
+      const updatedAtEl = el('updatedAt');
+      const rejectedCountEl = el('rejectedCount');
+
+      let liveTimer = null;
+      let isLive = false;
+      let currentEventId = null;
+
+      async function loadConfig() {
+        try {
+          const res = await fetch('./config.json', { cache: 'no-store' });
+          if (!res.ok) throw new Error(`config.json missing (HTTP ${res.status})`);
+          const cfg = await res.json();
+          if (!cfg.apiUrl || !cfg.apiKey) throw new Error('config.json is missing apiUrl/apiKey');
+          APPSYNC_URL = cfg.apiUrl;
+          API_KEY = cfg.apiKey;
+          return true;
+        } catch (err) {
+          showBanner(configBanner, 'error', "Couldn't load configuration: " + err.message);
+          return false;
+        }
+      }
+
+      async function gql(query, variables) {
+        const res = await fetch(APPSYNC_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
+          body: JSON.stringify({ query, variables }),
+        });
+        const body = await res.json();
+        if (!res.ok || body.errors) {
+          const message = body.errors
+            ? body.errors.map((e) => e.message).join('; ')
+            : `HTTP ${res.status}`;
+          throw new Error(message);
+        }
+        return body.data;
+      }
+
+      function showBanner(target, kind, message) {
+        if (!message) {
+          target.style.display = 'none';
+          target.textContent = '';
+          return;
+        }
+        target.className = 'banner ' + kind;
+        target.textContent = message;
+        target.style.display = 'block';
+      }
+
+      function formatTime(ms) {
+        if (ms >= 60000) {
+          const m = Math.floor(ms / 60000);
+          const s = (ms % 60000) / 1000;
+          return `${m}:${s.toFixed(2).padStart(5, '0')}`;
+        }
+        return (ms / 1000).toFixed(2) + 's';
+      }
+
+      function renderResults(results) {
+        if (!results || results.length === 0) {
+          resultsContainer.innerHTML = `<div class="empty">No results recorded for this event yet.</div>`;
+          return;
+        }
+        const sorted = [...results].sort((a, b) => a.lane - b.lane);
+        const rows = sorted
+          .map(
+            (r) => `
+      <tr>
+        <td class="lane num">${r.lane}</td>
+        <td class="bib">${r.bib}</td>
+        <td><span class="pill ${r.status}">${r.status}</span></td>
+        <td class="time num">${formatTime(r.timeMs)}</td>
+        <td class="rev num">${r.revision}</td>
+      </tr>
+    `
+          )
+          .join('');
+        resultsContainer.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th class="num">Lane</th>
+            <th>Bib</th>
+            <th>Status</th>
+            <th class="num">Time</th>
+            <th class="num">Rev</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+      }
+
+      function renderStats(stats) {
+        if (!stats) {
+          statsRow.style.display = 'none';
+          return;
+        }
+        el('statTracked').textContent = stats.athletesTracked;
+        el('statAccepted').textContent = stats.updatesAccepted;
+        el('statIgnored').textContent = stats.updatesIgnored;
+        statsRow.style.display = 'grid';
+      }
+
+      function stampUpdated() {
+        updatedAtEl.textContent = 'Last updated ' + new Date().toLocaleTimeString();
+      }
+
+      async function loadEvents(preserveSelection) {
+        reloadEventsBtn.disabled = true;
+        try {
+          const data = await gql(`query { events }`);
+          const events = data.events || [];
+          eventSelect.innerHTML = events.length
+            ? events.map((id) => `<option value="${id}">${id}</option>`).join('')
+            : `<option value="">No events yet</option>`;
+          eventSelect.disabled = events.length === 0;
+
+          const keepingManualSelection =
+            preserveSelection && currentEventId && !events.includes(currentEventId);
+
+          if (preserveSelection && currentEventId && events.includes(currentEventId)) {
+            eventSelect.value = currentEventId;
+          } else if (keepingManualSelection) {
+            eventSelect.selectedIndex = -1; // typed ID isn't a known event yet — leave the dropdown unselected
+          } else if (events.length) {
+            selectEvent(events[0]);
+            await loadEventDetail();
+          } else {
+            currentEventId = null;
+            refreshBtn.disabled = true;
+            renderResults([]);
+            renderStats(null);
+          }
+          showBanner(statusBanner, 'info', '');
+        } catch (err) {
+          showBanner(statusBanner, 'error', "Couldn't load the event list: " + err.message);
+        } finally {
+          reloadEventsBtn.disabled = false;
+        }
+      }
+
+      function selectEvent(eventId) {
+        currentEventId = eventId;
+        refreshBtn.disabled = !eventId;
+        const matchesOption = [...eventSelect.options].some((o) => o.value === eventId);
+        eventSelect.value = matchesOption ? eventId : '';
+        if (!matchesOption) eventSelect.selectedIndex = -1;
+      }
+
+      async function loadEventDetail() {
+        if (!currentEventId) return;
+        refreshBtn.disabled = true;
+        try {
+          const data = await gql(
+            `query EventDetail($eventId: ID!) {
+          results(eventId: $eventId) { bib lane revision status timeMs }
+          eventStats(eventId: $eventId) { athletesTracked updatesAccepted updatesIgnored }
+          updatesRejected
+        }`,
+            { eventId: currentEventId }
+          );
+          renderResults(data.results);
+          renderStats(data.eventStats);
+          rejectedCountEl.textContent = data.updatesRejected;
+          stampUpdated();
+          showBanner(statusBanner, 'info', '');
+        } catch (err) {
+          showBanner(statusBanner, 'error', "Couldn't fetch results: " + err.message);
+        } finally {
+          refreshBtn.disabled = false;
+        }
+      }
+
+      function setLive(on) {
+        isLive = on;
+        liveSwitch.classList.toggle('on', on);
+        liveSwitch.setAttribute('aria-checked', String(on));
+        if (liveTimer) clearInterval(liveTimer);
+        liveTimer = on ? setInterval(loadEventDetail, LIVE_POLL_INTERVAL_MS) : null;
+      }
+
+      eventSelect.addEventListener('change', () => {
+        manualEventId.value = '';
+        selectEvent(eventSelect.value);
+        loadEventDetail();
+      });
+      manualForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = manualEventId.value.trim();
+        if (!id) return;
+        selectEvent(id);
+        loadEventDetail();
+      });
+      reloadEventsBtn.addEventListener('click', () => loadEvents(true));
+      refreshBtn.addEventListener('click', loadEventDetail);
+      liveSwitch.addEventListener('click', () => setLive(!isLive));
+
+      // ---- Boot -------------------------------------------------------------
+      (async function boot() {
+        if (await loadConfig()) {
+          loadEvents(false);
+        }
+      })();
+    </script>
+  </body>
+</html>

@@ -20,11 +20,11 @@ export const handler = async (
     const message = JSON.parse(event.body ?? '[]');
 
     if (typeof message !== 'object' || message === null || Array.isArray(message)) {
-      // TODO: Add errors to updatesRejected
+      // TODO: Add errors to updatesRejected?
       return { statusCode: 400, body: JSON.stringify({ message: 'Invalid' }) };
     }
   } catch {
-    // TODO: Add errors to updatesRejected?
+    // TODO: Add errors to updatesRejected??
     return { statusCode: 400, body: JSON.stringify({ message: 'Invalid' }) };
   }
 
