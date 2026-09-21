@@ -1,7 +1,7 @@
 import { Logger } from '@aws-lambda-powertools/logger';
 import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
-import { ENV_QUEUE_URL } from '../consts';
+import { ENV_QUEUE_URL } from '../utils/consts';
 
 const logger = new Logger();
 const sqs = new SQSClient({});
@@ -14,7 +14,7 @@ export const handler = async (
 ): Promise<APIGatewayProxyResultV2> => {
   logger.logEventIfEnabled(event);
   logger.addContext(context);
-  logger.info('Payload received', { body: event.body });
+  logger.info('payload received', { body: event.body });
 
   try {
     const message = JSON.parse(event.body ?? '[]');

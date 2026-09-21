@@ -8,7 +8,7 @@ import {
 } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import * as path from 'path';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { ENV_INGEST_API_KEY } from '../consts';
+import { ENV_INGEST_API_KEY } from '../utils/consts';
 export class IngestAuthorizerConstruct extends Construct {
   public readonly authorizer: HttpLambdaAuthorizer;
 

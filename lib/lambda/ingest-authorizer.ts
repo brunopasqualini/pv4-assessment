@@ -1,5 +1,5 @@
 import { APIGatewayRequestSimpleAuthorizerHandlerV2 } from 'aws-lambda';
-import { ENV_INGEST_API_KEY } from '../consts';
+import { ENV_INGEST_API_KEY } from '../utils/consts';
 
 const API_KEY = process.env[ENV_INGEST_API_KEY];
 
